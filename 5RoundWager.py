@@ -152,9 +152,10 @@ def handle_session_end_request():
 
 class Player(object):
     """Class for each player"""
-    def __init__(self, coins = 6, roundsWon = 0):
+    def __init__(self, coins = 6, roundsWon = 0, previousWager = 0):
         self.coins = coins
         self.roundsWon = roundsWon
+        self.previousWager = previousWager  # useful for refunding coins to round loser(s)
 
 class GameState(object):
     """Class for the state of the game"""
@@ -164,7 +165,6 @@ class GameState(object):
         self.currentRound = currentRound
         self.numOfPlayers = numOfPlayers
         self.currentPlayer = currentPlayer
-
 
 def create_session_attributes(gameObject, playerArray):
     session_attributes = {}
@@ -192,6 +192,8 @@ def read_session_attributes(session_attributes):
 
     return gameObject, playerArray
 
+
+
 def start_game(intent, session):
     gameInstance = GameState()  # contains game  info
 
@@ -215,11 +217,12 @@ def round_start(intent, session):
     speech_output += ("Player %d, you're up first this round. You have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
 
     reprompt_text = ("Sorry, didn't catch that. Player %d, you have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
-    
-    session_attributes = session["attributes"]
+
+    session_attributes = session["attributes"] # no need to create session attributes because none change within this function's scope
     return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
 
 def get_wager(intent, session):
+    """if this intent occurs, the first player has already said a number"""
     gameInstance, playerArray = read_session_attributes(session["attributes"])
     card_title = "Wager"
     should_end_session = False
@@ -230,9 +233,41 @@ def get_wager(intent, session):
         reprompt_text = speech_output
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
 
+    playerArray[gameInstance.currentPlayer - 1].coins -= int(intent["slots"]["GetWager"]["value"]) # subtracts the wager amount from player's coin balance
+    playerArray[gameInstance.currentPlayer - 1].previousWager = int(intent["slots"]["GetWager"]["value"])
+
+    #otherwise, this intent is valid. Now, we must check if the current player is last player. if they are, then round ends. if not, we prompt for next player to wager.
+    if gameInstance.currentPlayer == gameInstance.numOfPlayers:
+        # round is over
+        session["attributes"] = create_session_attributes(gameInstance, playerArray)
+        return round_end(intent, session)
+    else:
+        gameInstance.currentPlayer += 1  # FIXME: future rounds can start at Player2, and player1 hasn't played yet. so this method skips player1's turn in the entire round...
+        speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
+        reprompt_text = "Sorry, didn't get that. How many coins do you want to wager?"
+
+        session_attributes = create_session_attributes(gameInstance, playerArray)
+        return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
+
+def round_end(intent, session):
+    # iterate through playerArray and declare winner based on who has highest previousWager
+    # if it's a tie:
+    #   speech_output += a message for this
+    # else:
+    #   increment that player's roundsWon
+    # increment currentRound
+    # check if isGameOver()  --> based on if currentRound > numOfRounds or if any player reached roundsToWin
+    #   true:
+    #       should_end_session = true and speech_output says who winner is (or if it's a tie) and thanks users for playing           reprompt_text = None
+    #       probably good to do this in a separate GameOver() function
+    #   False:
+    #       currentPlayer = winningPlayer (of that round)
+    #           FIXME --> handle this bug (currently, this method of currentPlayer = winningPlayer means that any players that come before this player will get skipped next round) --> possible solution could be adding a boolean to each player for hasPlayedThisRound [and then reset the boolean to false in this round_end function for everyone]
+    #       refund half the wagered amounts, rounded up, to all losers of that round
+    #
 
 
-    speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % )
+
 
 
 #

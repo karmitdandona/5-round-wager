@@ -1,0 +1,35 @@
+NOTE: this file is more scratch work for general game logic and flow
+
+round_start
+get_wager
+  input validation
+  subtract coins spent
+increment currentPlayer
+get_wager
+  input validation
+  subtract coins spent
+round_end
+  increment roundsWon for winning player
+  increment currentRound
+  check if isGameOver()
+    based on if any player has reached roundsToWin (iterate over all players) or if currentRound > numOfRounds
+    if isGameOver() returns true: GameOver(); else:
+  set currentPlayer to the winning player
+  refund wagered amounts for ALL players that are not winning player of that round
+repeat above
+
+GameOver():
+  say winning player and clal the end session function thing
+
+
+round_start:
+  "welcome to round %d."
+  // iterate over numOfPlayers
+      "Player %d, you have won %d rounds. You currently have %d coins."
+
+get_wager:
+  "Player %d, you have %d coins left. how many do you want to wager?"
+
+round_end:
+  "Player %d wins this round."
+  // check if game is over (based on rounds won)
