@@ -1,0 +1,6 @@
+StartGame Skip
+GetWager {Number}
+GetWager {Number} coins
+GetWager Wager {Number}
+GetWager Wager {Number} Coins
+AMAZON.HelpIntent Help
