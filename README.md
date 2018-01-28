@@ -12,3 +12,7 @@ Conceptually, this game is simple to pick up and learn quickly. However, there i
 
 #### Future Possibilities to Further this Project
 * Implement a single player mode to play against Alexa
+* Potential to increase number of players (the code scalability is already mostly implemented, but game logic and win conditions would need rebalancing)
+
+##### Note:
+This project was created as a learning experience with a heavy emphasis on scalability. Feedback would be greatly appreciated.
