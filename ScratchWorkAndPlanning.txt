@@ -1,0 +1,102 @@
+***PREDICAMENT: HOW CAN WE GET PLAYER1 TO WIN 50% OF TIME STRATEGICALLY***
+
+"5 round wager"
+
+Schema:
+  Player1: 5 coins
+  Player2: 5 coins
+  5 rounds total, first player to win 3 rounds wins the game
+
+
+P1: 5     P2: 5   refund 1 coin to winner, 2 to loser @ end of round; P1 always goes first
+
+Round1:
+  P1: 1
+  P2: 2
+  P2 wins!    (current balance: P1: 6, P2: 5)
+
+Round2:
+  P1: 3
+  P2: 4
+  P2 wins!    (current balance: P1: 5, P2: 2)
+
+Round3:
+  P1: 3
+  P2: 0
+  P1 wins!    (current balance: P1: 3, P2: 4)
+
+Round4:
+  P1: 3
+  P2: 4
+  P2 wins! GAME OVER
+
+
+  P1: 5     P2: 5   refund 1 coin to winner, 2 to loser @ end of round; winner goes first, bo3
+
+  Round1:
+    P1: 1
+    P2: 2
+    P2 wins!    (current balance: P1: 6, P2: 5)
+
+  Round2:
+    P2: 1
+    P1: 2
+    P1 wins!    (current balance: P1: 5, P2: 6 )
+
+  Round3:
+    P1: 1
+    P2: 2
+    P2 wins!    (current balance: P1: 6, P2: 5)
+
+  Round 4:
+    P2: 1
+    P1: 2
+    P1 wins!    (current balance: P1: 5, P2: 6)
+
+  P2 wins game...
+
+
+
+new idea: after each round, loser gets half of spent coins back, rounded up (winner goes first)
+
+Round1:
+  P1: 1
+  P2: 2
+  P2 wins!    (current balance: P1: 5, P2: 3)
+
+Round2:
+  P2: 2
+  P1: 1
+  P2 wins!    (current balance: P1: 5, P2: 1)
+
+Round3:
+  P2: 1
+  P1: 2
+  P1 wins!    (current balance: P1: 3, P2: 1)
+
+
+new idea: after each round, each players get 1 coin back and loser gets 1 bonus coin
+
+P1 always starts, but the bonus refund to loser compensates him more
+OR::: winner starts next round
+
+
+P1: 5     P2: 5   refund 1 coin to winner, 2 to loser @ end of round; P1 always goes first
+
+beatable: P2 wins mostly; if winning round, only win by 1 --> if losing, lose by 2 or more
+
+
+
+
+ANSWER:
+  best 3of5
+  both players start with 6 coins
+  loser gets half of spent coins from that round refunded (rounds up)
+  winner goes fist next round
+
+
+UserFlow:
+  get_welcome_response: "Welcome to 5RoundWager. Say Help for instructions or Skip to get started."
+    Help -> AMAZON.HelpIntent -> custom function that says instructions, then does StartGame
+    Skip -> StartGame
+      GameLoop

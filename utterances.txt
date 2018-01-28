@@ -1,4 +1,6 @@
 StartGame Skip
+StartGame Start
+StartGame Start game
 GetWager {Number}
 GetWager {Number} coins
 GetWager Wager {Number}
