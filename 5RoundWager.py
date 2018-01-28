@@ -199,7 +199,12 @@ def start_game(intent, session):
     for i in range(1, gameInstance.numOfPlayers + 1):
         playerArray.append(Player())
 
-def round_start(gameInstance, playerArray):
+    session["attributes"] = create_session_attributes(gameInstance, playerArray)
+    return round_start(intent, session)
+
+def round_start(intent, session):
+    gameInstance, playerArray = read_session_attributes(session["attributes"])
+
     card_title = "Round start"
     should_end_session = False
     speech_output = ("Welcome to Round %d. " % gameInstance.currentRound)
@@ -207,7 +212,27 @@ def round_start(gameInstance, playerArray):
     for i in range(0, len(playerArray)):
         speech_output += ("Player %d, you have won %d rounds so far. You have %d coins left." % i+1, playerArray[i].roundsWon, playerArray[i].coins)
 
+    speech_output += ("Player %d, you're up first this round. You have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
 
+    reprompt_text = ("Sorry, didn't catch that. Player %d, you have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
+    
+    session_attributes = session["attributes"]
+    return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
+
+def get_wager(intent, session):
+    gameInstance, playerArray = read_session_attributes(session["attributes"])
+    card_title = "Wager"
+    should_end_session = False
+
+    # if wager amount is more than current coins or is negative:
+    if intent["slots"]["GetWager"]["value"] > playerArray[gameInstance.currentPlayer - 1].coins or intent["slots"]["GetWager"]["value"] < 0:
+        speech_output = ("Sorry, that's not a valid wager of coins. You can wager 0 to %d coins. Player %d, how many would coins would you like to wager?" % playerArray[gameInstance.currentPlayer - 1].coins, gameInstance.currentPlayer)
+        reprompt_text = speech_output
+        return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
+
+
+
+    speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % )
 
 
 #
