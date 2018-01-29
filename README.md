@@ -7,10 +7,12 @@ A fun local 2-player game for the Amazon Alexa!
 * Rounds are won by wagering more coins than the other player.
 ***
 * HOWEVER, the loser of a round gets all of their spent coins from that round refunded and the winner must go first in the following round, so wager carefully!
+* (If the round is a tie, the starting player of the following round is randomized. This can be an effective strategy to maintain a lead!)
 
-Conceptually, this game is simple to pick up and learn quickly. However, there is a deep mathematical strategy involved in this game, and both players are on similar footing.
+Conceptually, this game is simple to pick up and learn quickly. However, there is a deep mathematical strategy involved in this game, and both players are on fairly similar footing.
 
 #### Future Possibilities to Further this Project
+* The game might be more balanced if Player1 starts with 1 coin more than Player2.
 * Implement a single player mode to play against Alexa
 * Potential to increase number of players (the code scalability is already mostly implemented, but game logic and win conditions would need rebalancing)
 
