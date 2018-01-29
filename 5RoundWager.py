@@ -131,7 +131,7 @@ def help_response():
     session_attributes = {}
     card_title = "Welcome"
 
-    speech_output = "There are 5 rounds in this local 2 player game. The winner is whoever wins 3 of the 5 rounds. Both players will start with 6 coins. Round 1 begins with Player 1 wagering some of your coins. You can wager any number from 0 to 6. Player 2 then respons with their wager amount. The winner of a round is whoever wagers the most coins in that round. The loser of the round gets half of their coins spent in that round refunded, rounded up. The winner wagers first in the following round. This game is mathematically complex and strategic, so wager carefully! Say Help to repeat these instructions, or Skip to start the game."
+    speech_output = "There are 5 rounds in this local 2 player game. The winner is whoever wins 3 of the 5 rounds. Both players will start with 6 coins. Round 1 begins with Player 1 wagering some of your coins. You can wager any number from 0 to 6. Player 2 then respons with their wager amount. The winner of a round is whoever wagers the most coins in that round. The loser of the round gets their coins wagered in that round refunded. The winner wagers first in the following round. This game is mathematically complex and strategic, so wager carefully! Say Help to repeat these instructions, or Skip to start the game."
     reprompt_text = "Please say Help for instructions or Skip to start the game."
 
     should_end_session = False
@@ -152,10 +152,11 @@ def handle_session_end_request():
 
 class Player(object):
     """Class for each player"""
-    def __init__(self, coins = 6, roundsWon = 0, previousWager = 0):
+    def __init__(self, coins = 6, roundsWon = 0, previousWager = 0, hasPlayedThisRound = False):
         self.coins = coins
         self.roundsWon = roundsWon
         self.previousWager = previousWager  # useful for refunding coins to round loser(s)
+        self.hasPlayedThisRound = hasPlayedThisRound
 
 class GameState(object):
     """Class for the state of the game"""
@@ -235,14 +236,24 @@ def get_wager(intent, session):
 
     playerArray[gameInstance.currentPlayer - 1].coins -= int(intent["slots"]["GetWager"]["value"]) # subtracts the wager amount from player's coin balance
     playerArray[gameInstance.currentPlayer - 1].previousWager = int(intent["slots"]["GetWager"]["value"])
+    playerArray[gameInstance.currentPlayer - 1].hasPlayedThisRound = True
 
     #otherwise, this intent is valid. Now, we must check if the current player is last player. if they are, then round ends. if not, we prompt for next player to wager.
-    if gameInstance.currentPlayer == gameInstance.numOfPlayers:
+
+    turnNotOver = False
+    for players in range(0, len(playerArray)):
+        if playerArray[players].hasPlayedThisRound == False:
+            gameInstance.currentPlayer = players + 1
+            turnNotOver = True
+            break
+        else:
+            continue
+    if not turnNotOver:
         # round is over
         session["attributes"] = create_session_attributes(gameInstance, playerArray)
         return round_end(intent, session)
     else:
-        gameInstance.currentPlayer += 1  # FIXME: future rounds can start at Player2, and player1 hasn't played yet. so this method skips player1's turn in the entire round...
+        # player has already been incremented to first player in playerArray that hasn't played yet
         speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
         reprompt_text = "Sorry, didn't get that. How many coins do you want to wager?"
 
@@ -250,6 +261,24 @@ def get_wager(intent, session):
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
 
 def round_end(intent, session):
+    gameInstance, playerArray = read_session_attributes(session["attributes"])
+
+    # NOTE: might be more efficient to have a dict, where key=player# and value = previousWager... then see max value in entire dict (if it exists) and that's val's key is the winning play
+    currentHighestWager = playerArray[0].previousWager
+    roundWinner = 0
+    roundIsTie = True  # this is for scalability, so if there's 10 players and 5 of them tie but some of them win, the below loop still works
+    for player in range(0, len(playerArray)):
+        if playerArray[player].previousWager != currentHighestWager:
+            roundIsTie = False  # players have wagered diff amounts, so not possible to tie
+            if playerArray[player].previousWager > currentHighestWager:
+                currentHighestWager = playerArray[player].previousWager
+                roundWinner = player + 1
+
+    if roundIsTie:
+        speech_output = "This round was a tie! All players get "
+
+
+
     # iterate through playerArray and declare winner based on who has highest previousWager
     # if it's a tie:
     #   speech_output += a message for this
@@ -264,6 +293,7 @@ def round_end(intent, session):
     #       currentPlayer = winningPlayer (of that round)
     #           FIXME --> handle this bug (currently, this method of currentPlayer = winningPlayer means that any players that come before this player will get skipped next round) --> possible solution could be adding a boolean to each player for hasPlayedThisRound [and then reset the boolean to false in this round_end function for everyone]
     #       refund half the wagered amounts, rounded up, to all losers of that round
+    #       start new round (round_start?) --> will have to append speech_output to this then
     #
 
 
