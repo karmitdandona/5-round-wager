@@ -174,7 +174,7 @@ def create_session_attributes(gameObject, playerArray):
 
     playerDict = {}
     for playerIndex in range(0, len(playerArray)):
-        playerDict[playerIndex] = playerArray[playerIndex]
+        playerDict[playerIndex] = vars(playerArray[playerIndex])
     session_attributes.update(playerDict)
 
     #sample format: {'numOfRounds': 5, 'roundsToWin': 3, 'currentRound': 0, 'numOfPlayers': 2, 'currentPlayer': 1, 0: {'coins': 6, 'roundsWon': 0}, 1: {'coins': 6, 'roundsWon': 0}}
@@ -189,7 +189,9 @@ def read_session_attributes(session_attributes):
         if not str(key).isdigit():
             gameObjectAttributes[key] = session_attributes[key]
         else:
-            playerArray.append(Player(**session_attributes[key]))
+            playerDict = session_attributes[key]
+            newPlayer = Player(**playerDict)
+            playerArray.append(newPlayer)
     gameObject = GameState(**gameObjectAttributes)
 
     return gameObject, playerArray
@@ -214,11 +216,11 @@ def round_start(intent, session, speech_output = ""):
     speech_output += ("Welcome to Round %d. " % gameInstance.currentRound)
 
     for i in range(0, len(playerArray)):
-        speech_output += ("Player %d, you have won %d rounds so far. You have %d coins left." % i+1, playerArray[i].roundsWon, playerArray[i].coins)
+        speech_output += ("Player %d, you have won %d rounds so far. You have %d coins left. " % (i+1, playerArray[i].roundsWon, playerArray[i].coins))
 
-    speech_output += ("Player %d, you're up first this round. You have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
+    speech_output += ("Player %d, you're up first this round. You have %d coins left. How many would you like to wager?" % (gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins))
 
-    reprompt_text = ("Sorry, didn't catch that. Player %d, you have %d coins left. How many would you like to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
+    reprompt_text = ("Sorry, didn't catch that. Player %d, you have %d coins left. How many would you like to wager?" % (gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins))
 
     session_attributes = session["attributes"] # no need to create session attributes because none change within this function's scope
     return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
@@ -230,13 +232,13 @@ def get_wager(intent, session):
     should_end_session = False
 
     # if wager amount is more than current coins or is negative:
-    if intent["slots"]["GetWager"]["value"] > playerArray[gameInstance.currentPlayer - 1].coins or intent["slots"]["GetWager"]["value"] < 0:
-        speech_output = ("Sorry, that's not a valid wager of coins. You can wager 0 to %d coins. Player %d, how many would coins would you like to wager?" % playerArray[gameInstance.currentPlayer - 1].coins, gameInstance.currentPlayer)
+    if intent["slots"]["Number"]["value"] > playerArray[gameInstance.currentPlayer - 1].coins or intent["slots"]["Number"]["value"] < 0:
+        speech_output = ("Sorry, that's not a valid wager of coins. You can wager 0 to %d coins. Player %d, how many would coins would you like to wager?" % (playerArray[gameInstance.currentPlayer - 1].coins, gameInstance.currentPlayer))
         reprompt_text = speech_output
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
 
-    playerArray[gameInstance.currentPlayer - 1].coins -= int(intent["slots"]["GetWager"]["value"]) # subtracts the wager amount from player's coin balance
-    playerArray[gameInstance.currentPlayer - 1].previousWager = int(intent["slots"]["GetWager"]["value"])
+    playerArray[gameInstance.currentPlayer - 1].coins -= int(intent["slots"]["Number"]["value"]) # subtracts the wager amount from player's coin balance
+    playerArray[gameInstance.currentPlayer - 1].previousWager = int(intent["slots"]["Number"]["value"])
     playerArray[gameInstance.currentPlayer - 1].hasPlayedThisRound = True
 
     #otherwise, this intent is valid. Now, we must check if the current player is last player. if they are, then round ends. if not, we prompt for next player to wager.
@@ -255,7 +257,7 @@ def get_wager(intent, session):
         return round_end(intent, session)
     else:
         # player has already been incremented to first player in playerArray that hasn't played yet
-        speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins)
+        speech_output = ("Player %d, you have %d coins left. How many do you want to wager?" % (gameInstance.currentPlayer, playerArray[gameInstance.currentPlayer - 1].coins))
         reprompt_text = "Sorry, didn't get that. How many coins do you want to wager?"
 
         session_attributes = create_session_attributes(gameInstance, playerArray)
@@ -296,11 +298,11 @@ def round_end(intent, session):
         for player in range(0, len(playerArray)):
             if playerArray[player].roundsWon >= gameInstance.roundsToWin:
                 gameWinner = player + 1
-                speech_output += ("Player %d won %d rounds. Player %d is the winner of 5 Round Wager! Thanks for playing!" % gameWinner, gameInstance.roundsToWin, gameWinner)
+                speech_output += ("Player %d won %d rounds. Player %d is the winner of 5 Round Wager! Thanks for playing!" % (gameWinner, gameInstance.roundsToWin, gameWinner))
                 break
         if gameWinner == -1:
             # the game was a tie, no one won
-            speech_output += ("Unfortunately, no player won %d rounds. This game of 5 Round Wager is a tie! Thanks for playing!" % gameInstance.roundsToWin)
+            speech_output += ("Unfortunately, no player won %d rounds. This game of 5 Round Wager is a tie! Thanks for playing!" % (gameInstance.roundsToWin))
 
         session_attributes = create_session_attributes(gameInstance, playerArray)
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
