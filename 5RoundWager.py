@@ -1,6 +1,7 @@
 
 
 from __future__ import print_function
+from random import randint
 
 
 # --------------- Main handler ------------------
@@ -131,8 +132,8 @@ def help_response():
     session_attributes = {}
     card_title = "Welcome"
 
-    speech_output = "There are 5 rounds in this local 2 player game. The winner is whoever wins 3 of the 5 rounds. Both players will start with 6 coins. Round 1 begins with Player 1 wagering some of your coins. You can wager any number from 0 to 6. Player 2 then respons with their wager amount. The winner of a round is whoever wagers the most coins in that round. The loser of the round gets their coins wagered in that round refunded. The winner wagers first in the following round. This game is mathematically complex and strategic, so wager carefully! Say Help to repeat these instructions, or Skip to start the game."
-    reprompt_text = "Please say Help for instructions or Skip to start the game."
+    speech_output = "There are 5 rounds in this local 2 player game. The winner is whoever wins 3 of the 5 rounds. Both players will start with 6 coins. Round 1 begins with Player 1 wagering some of your coins. You can wager any number from 0 to 6. Player 2 then respons with their wager amount. The winner of a round is whoever wagers the most coins in that round. The loser of the round gets their coins wagered in that round refunded. The winner wagers first in the following round. This game is mathematically complex and strategic, so wager carefully! If the round is a tie, the starting player of the following round is randomized. This can be an effective strategy to maintain a lead! Say Help to repeat these instructions, or Skip to start the game."
+    reprompt_text = "Please say Help for the instructions again or Skip to start the game."
 
     should_end_session = False
     return build_response(session_attributes, build_speechlet_response(
@@ -205,12 +206,12 @@ def start_game(intent, session):
     session["attributes"] = create_session_attributes(gameInstance, playerArray)
     return round_start(intent, session)
 
-def round_start(intent, session):
+def round_start(intent, session, speech_output = ""):
     gameInstance, playerArray = read_session_attributes(session["attributes"])
 
     card_title = "Round start"
     should_end_session = False
-    speech_output = ("Welcome to Round %d. " % gameInstance.currentRound)
+    speech_output += ("Welcome to Round %d. " % gameInstance.currentRound)
 
     for i in range(0, len(playerArray)):
         speech_output += ("Player %d, you have won %d rounds so far. You have %d coins left." % i+1, playerArray[i].roundsWon, playerArray[i].coins)
@@ -265,7 +266,7 @@ def round_end(intent, session):
 
     # NOTE: might be more efficient to have a dict, where key=player# and value = previousWager... then see max value in entire dict (if it exists) and that's val's key is the winning play
     currentHighestWager = playerArray[0].previousWager
-    roundWinner = 0
+    roundWinner = -1
     roundIsTie = True  # this is for scalability, so if there's 10 players and 5 of them tie but some of them win, the below loop still works
     for player in range(0, len(playerArray)):
         if playerArray[player].previousWager != currentHighestWager:
@@ -274,28 +275,60 @@ def round_end(intent, session):
                 currentHighestWager = playerArray[player].previousWager
                 roundWinner = player + 1
 
+    playerArray = coin_refunder(playerArray, roundWinner)
+
     if roundIsTie:
-        speech_output = "This round was a tie! All players get "
+        speech_output = "This round was a tie! All players get their wagers from this round refunded. The starting player of the next round will be randomized."
+        gameInstance.currentPlayer = randint(1, gameInstance.numOfPlayers)
+    else:
+        speech_output = ("Player %d won this round! All other players get their wagers from this round refunded." % roundWinner)
+        gameInstance.currentPlayer = roundWinner
+
+    playerArray[roundWinner-1].roundsWon += 1
+    gameInstance.currentRound += 1
+
+    if is_game_over(gameInstance, playerArray):
+        should_end_session = True
+        card_title = "Game Over"
+        reprompt_text = None
+
+        gameWinner = -1  # remains -1 if game is tie, else becomes Player#
+        for player in range(0, len(playerArray)):
+            if playerArray[player].roundsWon >= gameInstance.roundsToWin:
+                gameWinner = player + 1
+                speech_output += ("Player %d won %d rounds. Player %d is the winner of 5 Round Wager! Thanks for playing!" % gameWinner, gameInstance.roundsToWin, gameWinner)
+                break
+        if gameWinner == -1:
+            # the game was a tie, no one won
+            speech_output += ("Unfortunately, no player won %d rounds. This game of 5 Round Wager is a tie! Thanks for playing!" % gameInstance.roundsToWin)
+
+        session_attributes = create_session_attributes(gameInstance, playerArray)
+        return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
+
+    else:
+        # game is not over
+        for player in range(0, len(playerArray)):
+            playerArray[player].hasPlayedThisRound = False
+        session["attributes"] = create_session_attributes(gameInstance, playerArray)
+        return round_start(intent, session, speech_output)
 
 
+def coin_refunder(playerArray, roundWinner):
+    """roundWinner is -1 if the round was a tie, so everyone will get a refund back"""
+    for player in range(0, len(playerArray)):
+        if (player + 1) != roundWinner:
+            playerArray[player].coins += playerArray[player].previousWager
+    return playerArray
 
-    # iterate through playerArray and declare winner based on who has highest previousWager
-    # if it's a tie:
-    #   speech_output += a message for this
-    # else:
-    #   increment that player's roundsWon
-    # increment currentRound
-    # check if isGameOver()  --> based on if currentRound > numOfRounds or if any player reached roundsToWin
-    #   true:
-    #       should_end_session = true and speech_output says who winner is (or if it's a tie) and thanks users for playing           reprompt_text = None
-    #       probably good to do this in a separate GameOver() function
-    #   False:
-    #       currentPlayer = winningPlayer (of that round)
-    #           FIXME --> handle this bug (currently, this method of currentPlayer = winningPlayer means that any players that come before this player will get skipped next round) --> possible solution could be adding a boolean to each player for hasPlayedThisRound [and then reset the boolean to false in this round_end function for everyone]
-    #       refund half the wagered amounts, rounded up, to all losers of that round
-    #       start new round (round_start?) --> will have to append speech_output to this then
-    #
+def is_game_over(gameInstance, playerArray):
+    if gameInstance.currentRound > gameInstance.numOfRounds:
+        return True
 
+    for player in range(0, len(playerArray)):
+        if playerArray[player].roundsWon >= gameInstance.roundsToWin:
+            return True
+
+    return False
 
 
 
