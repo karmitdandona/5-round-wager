@@ -232,7 +232,7 @@ def get_wager(intent, session):
     should_end_session = False
 
     # if wager amount is more than current coins or is negative:
-    if intent["slots"]["Number"]["value"] > playerArray[gameInstance.currentPlayer - 1].coins or intent["slots"]["Number"]["value"] < 0:
+    if int(intent["slots"]["Number"]["value"]) > playerArray[gameInstance.currentPlayer - 1].coins or int(intent["slots"]["Number"]["value"]) < 0:
         speech_output = ("Sorry, that's not a valid wager of coins. You can wager 0 to %d coins. Player %d, how many would coins would you like to wager?" % (playerArray[gameInstance.currentPlayer - 1].coins, gameInstance.currentPlayer))
         reprompt_text = speech_output
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
@@ -283,7 +283,7 @@ def round_end(intent, session):
         speech_output = "This round was a tie! All players get their wagers from this round refunded. The starting player of the next round will be randomized."
         gameInstance.currentPlayer = randint(1, gameInstance.numOfPlayers)
     else:
-        speech_output = ("Player %d won this round! All other players get their wagers from this round refunded." % roundWinner)
+        speech_output = ("Player %d won this round! All other players get their wagers from this round refunded. " % roundWinner)
         gameInstance.currentPlayer = roundWinner
 
     playerArray[roundWinner-1].roundsWon += 1
