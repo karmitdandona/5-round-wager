@@ -235,6 +235,7 @@ def get_wager(intent, session):
     if int(intent["slots"]["Number"]["value"]) > playerArray[gameInstance.currentPlayer - 1].coins or int(intent["slots"]["Number"]["value"]) < 0:
         speech_output = ("Sorry, that's not a valid wager of coins. You can wager 0 to %d coins. Player %d, how many would coins would you like to wager?" % (playerArray[gameInstance.currentPlayer - 1].coins, gameInstance.currentPlayer))
         reprompt_text = speech_output
+        session_attributes = create_session_attributes(gameInstance, playerArray)
         return build_response(session_attributes, build_speechlet_response(card_title, speech_output, reprompt_text, should_end_session))
 
     playerArray[gameInstance.currentPlayer - 1].coins -= int(intent["slots"]["Number"]["value"]) # subtracts the wager amount from player's coin balance
