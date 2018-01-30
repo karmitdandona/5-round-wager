@@ -89,8 +89,8 @@ def build_speechlet_response(title, output, reprompt_text, should_end_session):
         },
         'card': {
             'type': 'Simple',
-            'title': "SessionSpeechlet - " + title,
-            'content': "SessionSpeechlet - " + output
+            'title': title,
+            'content': output
         },
         'reprompt': {
             'outputSpeech': {
@@ -268,7 +268,7 @@ def round_end(intent, session):
 
     # NOTE: might be more efficient to have a dict, where key=player# and value = previousWager... then see max value in entire dict (if it exists) and that's val's key is the winning play
     currentHighestWager = playerArray[0].previousWager
-    roundWinner = -1
+    roundWinner = 1
     roundIsTie = True  # this is for scalability, so if there's 10 players and 5 of them tie but some of them win, the below loop still works
     for player in range(0, len(playerArray)):
         if playerArray[player].previousWager != currentHighestWager:
@@ -277,16 +277,16 @@ def round_end(intent, session):
                 currentHighestWager = playerArray[player].previousWager
                 roundWinner = player + 1
 
-    playerArray = coin_refunder(playerArray, roundWinner)
-
     if roundIsTie:
-        speech_output = "This round was a tie! All players get their wagers from this round refunded. The starting player of the next round will be randomized."
+        speech_output = "This round was a tie! All players get their wagers from this round refunded. The starting player of the next round will be randomized. "
         gameInstance.currentPlayer = randint(1, gameInstance.numOfPlayers)
+        roundWinner = -1  # used as a function paramter for refunds
     else:
         speech_output = ("Player %d won this round! All other players get their wagers from this round refunded. " % roundWinner)
         gameInstance.currentPlayer = roundWinner
+        playerArray[roundWinner-1].roundsWon += 1
 
-    playerArray[roundWinner-1].roundsWon += 1
+    playerArray = coin_refunder(playerArray, roundWinner)
     gameInstance.currentRound += 1
 
     if is_game_over(gameInstance, playerArray):
