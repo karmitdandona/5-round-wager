@@ -1,5 +1,5 @@
 # 5-round-wager
-A fun local 2-player game for the Amazon Alexa!
+[A fun local 2-player game for the Amazon Alexa!](https://www.amazon.com/Karmit-Dandona-5-Round-Wager/dp/B079FKBB4Q)
 
 ### The Game
 * There are 5 rounds and the winner is determined from a best 3 of 5 format.
